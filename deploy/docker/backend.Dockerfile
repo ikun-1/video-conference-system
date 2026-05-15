@@ -12,6 +12,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o fast-gin main.go
 # Stage 2: 运行环境
 FROM alpine:3.21
 
+# 使用国内 apk 镜像加速包索引和包下载
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories || true
 RUN apk add --no-cache ca-certificates tzdata ffmpeg
 
 WORKDIR /app
@@ -26,6 +28,8 @@ COPY <<-"EOF" /app/docker-entrypoint.sh
 	set -e
 	echo ">>> 执行数据库迁移..."
 	./fast-gin -f /app/config/settings.yaml -db
+	echo ">>> 初始化 RBAC 数据..."
+	./fast-gin -f /app/config/settings.yaml -m rbac -t init
 	echo ">>> 启动后端服务..."
 	exec ./fast-gin -f /app/config/settings.yaml
 EOF
