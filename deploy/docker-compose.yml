@@ -92,6 +92,8 @@ services:
     container_name: video-conference-front
     restart: unless-stopped
     network_mode: host
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
     logging:
       driver: "json-file"
       options:

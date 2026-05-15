@@ -3,6 +3,7 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 COPY video-conference-backend/go.mod video-conference-backend/go.sum ./
+ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 COPY video-conference-backend/ .
