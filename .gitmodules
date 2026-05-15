@@ -1,0 +1,6 @@
+[submodule "video-conference-front"]
+	path = video-conference-front
+	url = https://github.com/ikun-1/video-conference-front.git
+[submodule "video-conference-backend"]
+	path = video-conference-backend
+	url = https://github.com/ikun-1/fast-gin.git
