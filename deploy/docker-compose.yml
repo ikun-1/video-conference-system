@@ -1,0 +1,103 @@
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:9
+    container_name: video-conference-mysql
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_PASSWORD:-88888888}"
+      MYSQL_DATABASE: "fast_gin"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_PASSWORD:-88888888}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: video-conference-redis
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # TURN/STUN 服务器
+  coturn:
+    image: coturn/coturn:latest
+    container_name: video-conference-turn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Go/Gin 后端
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/docker/backend.Dockerfile
+    container_name: video-conference-backend
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # 配置文件（只读）
+      - ./settings.yaml:/app/config/settings.yaml:ro
+      # 上传文件持久化
+      - ../video-conference-backend/uploads:/app/uploads
+      # 录制文件持久化
+      - ../video-conference-backend/recordings:/app/recordings
+      # 日志持久化
+      - ../video-conference-backend/logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx 前端 + 反向代理
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/docker/frontend.Dockerfile
+    container_name: video-conference-front
+    restart: unless-stopped
+    network_mode: host
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql-data:
+  redis-data:
